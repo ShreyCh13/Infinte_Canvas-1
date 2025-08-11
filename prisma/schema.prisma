@@ -48,11 +48,31 @@ model Membership {
   @@unique([userId, spaceId])
 }
 
-enum Role { VIEWER COMMENTER EDITOR APPROVER OWNER }
+enum Role {
+  VIEWER
+  COMMENTER
+  EDITOR
+  APPROVER
+  OWNER
+}
 
-enum BlockType { TEXT TABLE METRIC CHART TASK IMAGE AUDIO FORM GRAPH }
+enum BlockType {
+  TEXT
+  TABLE
+  METRIC
+  CHART
+  TASK
+  IMAGE
+  AUDIO
+  FORM
+  GRAPH
+}
 
-enum BlockStatus { NORMAL PROPOSED LOCKED }
+enum BlockStatus {
+  NORMAL
+  PROPOSED
+  LOCKED
+}
 
 model Block {
   id           String      @id @default(cuid())
@@ -105,7 +125,11 @@ model Receipt {
   approver     User?    @relation(fields: [approvedById], references: [id])
 }
 
-enum ApprovalState { PROPOSED APPROVED REJECTED }
+enum ApprovalState {
+  PROPOSED
+  APPROVED
+  REJECTED
+}
 
 model ApprovalRequest {
   id          String        @id @default(cuid())
@@ -141,7 +165,11 @@ model View {
   space   Space    @relation(fields: [spaceId], references: [id])
 }
 
-enum ViewType { DOC DECK DASHBOARD }
+enum ViewType {
+  DOC
+  DECK
+  DASHBOARD
+}
 
 model Runbook {
   id      String   @id @default(cuid())
