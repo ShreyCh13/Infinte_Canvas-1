@@ -1,0 +1,190 @@
+// Prisma schema for Infinite Canvas MVP
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  image        String?
+  memberships  Membership[]
+  blocks       Block[]  @relation("UserBlocks")
+  comments     Comment[]
+  receipts     Receipt[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  // NextAuth relations
+  accounts     Account[]
+  sessions     Session[]
+}
+
+model Space {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  memberships  Membership[]
+  blocks       Block[]
+  views        View[]
+  runbooks     Runbook[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Membership {
+  id        String  @id @default(cuid())
+  userId    String
+  spaceId   String
+  role      Role
+  user      User    @relation(fields: [userId], references: [id])
+  space     Space   @relation(fields: [spaceId], references: [id])
+
+  @@unique([userId, spaceId])
+}
+
+enum Role { VIEWER COMMENTER EDITOR APPROVER OWNER }
+
+enum BlockType { TEXT TABLE METRIC CHART TASK IMAGE AUDIO FORM GRAPH }
+
+enum BlockStatus { NORMAL PROPOSED LOCKED }
+
+model Block {
+  id           String      @id @default(cuid())
+  spaceId      String
+  createdById  String
+  type         BlockType
+  title        String?
+  data         Json
+  x            Float
+  y            Float
+  width        Float
+  height       Float
+  status       BlockStatus @default(NORMAL)
+  cluster      String?
+  zIndex       Int         @default(0)
+  locked       Boolean     @default(false)
+  space        Space       @relation(fields: [spaceId], references: [id])
+  createdBy    User        @relation("UserBlocks", fields: [createdById], references: [id])
+  versions     BlockVersion[]
+  receipts     Receipt[]
+  approvals    ApprovalRequest[]
+  comments     Comment[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model BlockVersion {
+  id          String      @id @default(cuid())
+  blockId     String
+  data        Json
+  title       String?
+  status      BlockStatus
+  createdById String
+  createdAt   DateTime    @default(now())
+  block       Block       @relation(fields: [blockId], references: [id])
+  author      User        @relation(fields: [createdById], references: [id])
+}
+
+model Receipt {
+  id           String   @id @default(cuid())
+  blockId      String
+  actorId      String
+  summary      String
+  diff         Json
+  sourceIds    String[]
+  approvedById String?
+  createdAt    DateTime @default(now())
+  block        Block    @relation(fields: [blockId], references: [id])
+  actor        User     @relation(fields: [actorId], references: [id])
+  approver     User?    @relation(fields: [approvedById], references: [id])
+}
+
+enum ApprovalState { PROPOSED APPROVED REJECTED }
+
+model ApprovalRequest {
+  id          String        @id @default(cuid())
+  blockId     String
+  summary     String
+  riskHint    String?
+  state       ApprovalState @default(PROPOSED)
+  createdById String
+  decidedById String?
+  createdAt   DateTime      @default(now())
+  decidedAt   DateTime?
+  block       Block         @relation(fields: [blockId], references: [id])
+  creator     User          @relation(fields: [createdById], references: [id])
+  decider     User?         @relation(fields: [decidedById], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  blockId   String
+  authorId  String
+  body      String
+  createdAt DateTime @default(now())
+  block     Block    @relation(fields: [blockId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model View {
+  id      String   @id @default(cuid())
+  spaceId String
+  type    ViewType
+  name    String
+  config  Json
+  space   Space    @relation(fields: [spaceId], references: [id])
+}
+
+enum ViewType { DOC DECK DASHBOARD }
+
+model Runbook {
+  id      String   @id @default(cuid())
+  spaceId String
+  name    String
+  steps   Json
+  schedule String?
+  space   Space    @relation(fields: [spaceId], references: [id])
+}
+
+// NextAuth models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+
